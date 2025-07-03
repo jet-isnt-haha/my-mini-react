@@ -83,3 +83,12 @@ export function createFiberFromTypeAndProps(
   fiber.type = type;
   return fiber;
 }
+
+export type Container = Element | Document | DocumentFragment;
+
+export type FiberRoot = {
+  containerInfo: Container;
+  current: Fiber;
+  //一个准备提交 work-in-progress，HostRoot
+  finishedWork: Fiber | null;
+};
