@@ -127,6 +127,7 @@ function performWorkuntilDeadline() {
 const channel = new MessageChannel();
 const port = channel.port2;
 channel.port1.onmessage = performWorkuntilDeadline;
+
 function schedulePerformWorkUntilDeadline() {
   port.postMessage(null);
 }
@@ -184,6 +185,7 @@ function workLoop(initialTime: number): boolean {
       currentPriorityLevel = currentTask.priorityLevel;
       const didUserCallbackTimeout = currentTask.expirationTime <= currentTime;
       const continuationCallback = callback(didUserCallbackTimeout);
+
       if (typeof continuationCallback === "function") {
         currentTask.callback = continuationCallback;
         return true;
