@@ -1,5 +1,5 @@
-import { Flags } from "./ReactFiberFlags";
-import { WorkTag } from "./ReactWorkTags";
+import type { Flags } from "./ReactFiberFlags";
+import type { WorkTag } from "./ReactWorkTags";
 
 export type Fiber = {
   //标记fiber的类型，即描述组件类型，如原生标签、函数组件、类组件、Fragment等。这里参考ReactWorkTags.js
@@ -45,4 +45,12 @@ export type Fiber = {
 
   //缓存fiber
   alternate: Fiber | null;
+};
+
+export type Container = Element | Document | DocumentFragment;
+export type FiberRoot = {
+  containerInfo: Container;
+  current: Fiber;
+  //一个准备提交 work-in-progress，HostRoot
+  finishedWork: Fiber | null;
 };

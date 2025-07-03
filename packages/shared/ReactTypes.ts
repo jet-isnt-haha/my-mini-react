@@ -7,3 +7,5 @@ export type ReactElement = {
 
   _owner: any;
 };
+
+export type ReactNodeList = {};

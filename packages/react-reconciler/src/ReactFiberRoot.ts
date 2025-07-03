@@ -1,5 +1,5 @@
-import { Container, createFiber, Fiber, FiberRoot } from "./ReactFiber";
-
+import { createFiber } from "./ReactFiber";
+import type { Container, FiberRoot, Fiber } from "./ReactInternalType";
 import { HostRoot } from "./ReactWorkTags";
 
 export function createFiberRoot(containerInfo: Container): FiberRoot {
@@ -10,7 +10,7 @@ export function createFiberRoot(containerInfo: Container): FiberRoot {
   return root;
 }
 
-export function FiberRootNode(containerInfo) {
+export function FiberRootNode(containerInfo: Container) {
   this.containerInfo = containerInfo;
   this.current = null;
   this.finishedWork = null;

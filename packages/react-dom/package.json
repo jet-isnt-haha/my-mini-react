@@ -2,15 +2,14 @@
   "name": "react-dom",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
+  "main": "index.ts",
   "keywords": [],
   "author": "",
   "license": "ISC",
   "packageManager": "pnpm@10.9.0",
   "dependencies": {
-    "react-reconciler": "workspace:*"
+    "react-reconciler": "workspace:*",
+    "shared": "workspace:*",
+    "scheduler": "workspace:*"
   }
 }

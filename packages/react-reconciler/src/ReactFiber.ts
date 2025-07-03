@@ -1,12 +1,13 @@
 import {
   HostComponent,
   IndeterminateComponent,
-  WorkTag,
+  type WorkTag,
 } from "./ReactWorkTags";
-import { Flags, NoFlags } from "./ReactFiberFlags";
-import { Fiber } from "./ReactInternalType";
-import { ReactElement } from "../../shared/ReactTypes";
-import { isStr } from "../../shared/utils";
+import { NoFlags } from "./ReactFiberFlags";
+
+import type { ReactElement } from "shared/ReactTypes";
+import { isStr } from "shared/utils";
+import type { Fiber } from "./ReactInternalType";
 
 //创建第一个fiber
 export function createFiber(
@@ -82,13 +83,3 @@ export function createFiberFromTypeAndProps(
   fiber.type = type;
   return fiber;
 }
-
-export type Container = Element | Document | DocumentFragment;
-
-export type FiberRoot = {
-  containerInfo: Container;
-  current: Fiber;
-  //一个准备提交 work-in-progress，HostRoot
-  finishedWork: Fiber | null;
-};
-export { Fiber };
