@@ -1,5 +1,5 @@
-import { Fiber } from "./ReactFiber";
-import { Container, createFiber, FiberRoot } from "./ReactInternalType";
+import { Container, createFiber, Fiber, FiberRoot } from "./ReactFiber";
+
 import { HostRoot } from "./ReactWorkTags";
 
 export function createFiberRoot(containerInfo: Container): FiberRoot {
