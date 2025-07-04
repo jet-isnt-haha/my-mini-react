@@ -46,7 +46,7 @@ function FiberNode(tag: WorkTag, pendingProps: any, key: null | string) {
   this.pendingProps = pendingProps;
   this.memoizedProps = null;
 
-  //不同组件的memoizedState指代也不同
+  //不同组件的指代也不同
   //函数组件hook0
   //类组件state
   this.memoizedState = null;

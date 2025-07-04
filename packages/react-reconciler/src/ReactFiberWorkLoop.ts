@@ -24,7 +24,7 @@ export function scheduleUpdateOnFiber(root: FiberRoot, fiber: Fiber) {
 }
 
 export function performConcurrentWorkOnRoot(root: FiberRoot) {
-  //! 1.render，构建fiber树VDOM
+  //! 1.render，构建fiber树VDOM(beginWork|completeWork)
   renderRootSync(root);
   console.log("111", root);
   //! 2.commit，VDOM->DOM
