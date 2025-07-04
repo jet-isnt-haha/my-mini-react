@@ -1,5 +1,6 @@
 import { createFiber, createWorkInProgress } from "./ReactFiber";
 import { beginWork } from "./ReactFiberBeginWork";
+import { commitMutationEffects } from "./ReactFiberCommitWork";
 import { completeWork } from "./ReactFiberCompleteWork";
 import { ensureRootIsScheduled } from "./ReactFiberRootScheduler";
 import { Fiber, FiberRoot } from "./ReactInternalType";
@@ -28,8 +29,23 @@ export function performConcurrentWorkOnRoot(root: FiberRoot) {
   //! 1.render，构建fiber树VDOM(beginWork|completeWork)
   renderRootSync(root);
   console.log("111", root);
+
+  const finishedWork = root.current.alternate;
+  root.finishedWork = finishedWork;
+
   //! 2.commit，VDOM->DOM
-  // commitRoot(root)
+  commitRoot(root);
+}
+
+function commitRoot(root: FiberRoot) {
+  const prevExecutionContext = exectionContext;
+  //! 1.commit阶段开始
+  exectionContext |= CommitContext;
+  //! 2.mutation阶段,渲染DOM树
+  commitMutationEffects(root, root.finishedWork as Fiber);
+  //! 3.commit结束
+  exectionContext = prevExecutionContext;
+  workInProgressRoot = null;
 }
 
 function renderRootSync(root: FiberRoot) {
