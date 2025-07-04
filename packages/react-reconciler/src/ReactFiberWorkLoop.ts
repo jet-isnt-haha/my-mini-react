@@ -1,5 +1,6 @@
 import { createFiber, createWorkInProgress } from "./ReactFiber";
 import { beginWork } from "./ReactFiberBeginWork";
+import { completeWork } from "./ReactFiberCompleteWork";
 import { ensureRootIsScheduled } from "./ReactFiberRootScheduler";
 import { Fiber, FiberRoot } from "./ReactInternalType";
 
@@ -81,8 +82,7 @@ function completeUnitOfWork(unitOfWork: Fiber) {
   do {
     const current = completedWork.alternate;
     const returnFiber = completedWork.return;
-    // let next = completeWork(current, completedWork);
-    let next = null;
+    let next = completeWork(current, completedWork);
     if (next !== null) {
       workInProgress = next;
       return;

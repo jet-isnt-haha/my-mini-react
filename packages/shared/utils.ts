@@ -5,3 +5,7 @@ export function getCurrentTime(): number {
 export function isStr(sth: any) {
   return typeof sth === "string";
 }
+
+export function isNum(sth: any) {
+  return typeof sth === "number";
+}
