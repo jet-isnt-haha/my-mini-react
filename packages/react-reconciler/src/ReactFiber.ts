@@ -38,7 +38,7 @@ function FiberNode(tag: WorkTag, pendingProps: any, key: null | string) {
   //Fiber
   this.return = null;
   this.child = null;
-  this.sibiling = null;
+  this.sibling = null;
 
   //记录节点在兄弟节点中的位置下标，用于diff时候判断节点是否发生移动
   this.index = 0;
@@ -82,4 +82,32 @@ export function createFiberFromTypeAndProps(
   fiber.elementType = type;
   fiber.type = type;
   return fiber;
+}
+
+export function createWorkInProgress(current: Fiber, pendingProps: any): Fiber {
+  let workInProgress = current.alternate;
+  if (workInProgress === null) {
+    workInProgress = createFiber(current.tag, pendingProps, current.key);
+    workInProgress.elementType = current.elementType;
+    workInProgress.type = current.type;
+    workInProgress.stateNode = current.stateNode;
+
+    //双缓存
+    workInProgress.alternate = current;
+    current.alternate = workInProgress;
+  } else {
+    workInProgress.pendingProps = pendingProps;
+    workInProgress.type = current.type;
+
+    workInProgress.flags = NoFlags;
+  }
+
+  workInProgress.flags = current.flags;
+  workInProgress.child = current.child;
+  workInProgress.memoizedProps = current.memoizedProps;
+  workInProgress.memoizedState = current.memoizedState;
+
+  workInProgress.sibling = current.sibling;
+  workInProgress.index = current.index;
+  return workInProgress;
 }

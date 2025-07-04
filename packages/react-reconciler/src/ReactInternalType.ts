@@ -6,7 +6,7 @@ export type Fiber = {
   tag: WorkTag;
 
   //标记组件在当前层级下的唯一性
-  key: number;
+  key: string;
 
   //组件类型
   elementType: any;
@@ -25,7 +25,7 @@ export type Fiber = {
   //第一个子fiber
   child: Fiber | null;
   //下一个兄弟fiber
-  sibiling: Fiber | null;
+  sibling: Fiber | null;
   //记录节点在当前层级中的位置下标，用于diff时候判断节点是否需要发生移动
   index: number;
 
