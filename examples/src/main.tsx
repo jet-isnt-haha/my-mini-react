@@ -7,12 +7,12 @@ let fragment = (
     333
   </>
 );
-fragment = (
-  <Fragment key="jet">
-    <h1>111</h1>
-    <h2>222</h2>
-  </Fragment>
-);
+// fragment = (
+//   <Fragment key="jet">
+//     <h1>111</h1>
+//     <h2>222</h2>
+//   </Fragment>
+// );
 class ClassComponent extends Component {
   render() {
     return (
@@ -32,6 +32,7 @@ function FunctionComponent() {
 const jsx = (
   <div className="box border">
     <h1 className="border">omg</h1>
+    {fragment}
     <FunctionComponent />
     <ClassComponent />
     <h2>111</h2>
