@@ -3,7 +3,7 @@ import { beginWork } from "./ReactFiberBeginWork";
 import { commitMutationEffects } from "./ReactFiberCommitWork";
 import { completeWork } from "./ReactFiberCompleteWork";
 import { ensureRootIsScheduled } from "./ReactFiberRootScheduler";
-import { Fiber, FiberRoot } from "./ReactInternalType";
+import type { Fiber, FiberRoot } from "./ReactInternalType";
 
 type ExecutionContext = number;
 

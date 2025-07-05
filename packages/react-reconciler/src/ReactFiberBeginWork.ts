@@ -2,8 +2,15 @@
 //2.返回子节点
 
 import { mountChildFibers, reconcileChildFibers } from "./ReactChildFiber";
-import { Fiber } from "./ReactInternalType";
-import { HostComponent, HostRoot } from "./ReactWorkTags";
+import type { Fiber } from "./ReactInternalType";
+import {
+  ClassComponent,
+  Fragment,
+  FunctionComponent,
+  HostComponent,
+  HostRoot,
+  HostText,
+} from "./ReactWorkTags";
 
 export function beginWork(
   current: Fiber | null,
@@ -14,7 +21,14 @@ export function beginWork(
       return updateHostRoot(current, workInProgress);
     case HostComponent:
       return updateHostComponent(current, workInProgress);
-
+    case HostText:
+      return updateHostText(current, workInProgress);
+    case Fragment:
+      return updateHostFragment(current, workInProgress);
+    case ClassComponent:
+      return updateClassComponent(current, workInProgress);
+    case FunctionComponent:
+      return updateFunctionComponent(current, workInProgress);
     //todo
   }
 
@@ -48,6 +62,33 @@ function updateHostComponent(current: Fiber | null, workInProgress: Fiber) {
   const nextChildren = pendingProps.children;
   reconcileChildren(current, workInProgress, nextChildren);
 
+  return workInProgress.child;
+}
+
+//文本没有子节点，不需要协调
+function updateHostText(current: Fiber | null, workInProgress: Fiber) {
+  return null;
+}
+
+//由于是Fragment故直接协调子节点即可
+function updateHostFragment(current: Fiber | null, workInProgress: Fiber) {
+  const nextChildren = workInProgress.pendingProps.children;
+  reconcileChildren(current, workInProgress, nextChildren);
+  return workInProgress.child;
+}
+
+function updateClassComponent(current: Fiber | null, workInProgress: Fiber) {
+  const { type, pendingProps } = workInProgress;
+  const instance = new type(pendingProps);
+  const children = instance.render();
+  reconcileChildren(current, workInProgress, children);
+  return workInProgress.child;
+}
+
+function updateFunctionComponent(current: Fiber | null, workInProgress: Fiber) {
+  const { type, pendingProps } = workInProgress;
+  const children = type(pendingProps);
+  reconcileChildren(current, workInProgress, children);
   return workInProgress.child;
 }
 

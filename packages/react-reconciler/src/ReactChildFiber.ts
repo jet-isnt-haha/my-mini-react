@@ -1,8 +1,9 @@
 import { REACT_ELEMENT_TYPE } from "shared/ReactSymbols";
-import { Fiber } from "./ReactInternalType";
-import { ReactElement } from "shared/ReactTypes";
-import { createFiberFromElement } from "./ReactFiber";
+import type { Fiber } from "./ReactInternalType";
+import type { ReactElement } from "shared/ReactTypes";
+import { createFiberFromElement, createFiberFromText } from "./ReactFiber";
 import { Placement } from "./ReactFiberFlags";
+import { isArray } from "shared/utils";
 
 type ChildReconciler = (
   returnFiber: Fiber,
@@ -38,12 +39,79 @@ function createChildReconciler(
     return createFiber;
   }
 
+  function createChild(returnFiber: Fiber, newChild: any): Fiber | null {
+    if (isText(newChild)) {
+      const created = createFiberFromText(newChild + "");
+      created.return = returnFiber;
+      return created;
+    }
+    if (typeof newChild === "object" && newChild !== null) {
+      switch (newChild.$$typeof) {
+        case REACT_ELEMENT_TYPE:
+          const created = createFiberFromElement(newChild);
+          created.return = returnFiber;
+          return created;
+      }
+    }
+    return null;
+  }
+
+  function reconcileChildrenArray(
+    returnFiber: Fiber,
+    currentFirstChild: Fiber | null,
+    newChildren: Array<any>
+  ): Fiber | null {
+    let resultFirstChild: Fiber | null = null; //头节点
+    let previousNewFiber: Fiber | null = null;
+    let oldFiber = currentFirstChild;
+    let newIndex = 0;
+
+    //初次渲染
+    if (oldFiber === null) {
+      for (; newIndex < newChildren.length; ++newIndex) {
+        const newFiber = createChild(returnFiber, newChildren[newIndex]);
+        if (newFiber === null) {
+          continue;
+        }
+        //用于组件更新阶段，判断在更新前后的位置是否一致，如果不一致，需要移动
+        newFiber.index = newIndex;
+        if (previousNewFiber === null) {
+          resultFirstChild = newFiber;
+        } else {
+          previousNewFiber.sibling = newFiber;
+        }
+        previousNewFiber = newFiber;
+      }
+      //下一个兄弟节点
+
+      return resultFirstChild;
+    }
+    return resultFirstChild;
+  }
+
+  function reconcileSingleTextNode(
+    returnFiber: Fiber,
+    currentFirstChild: Fiber | null,
+    textContent: string
+  ) {
+    const created = createFiberFromText(textContent);
+    created.return = returnFiber;
+    return created;
+  }
+
   function reconcileChildFibers(
     returnFiber: Fiber,
     currentFirstChild: Fiber | null,
     newChild: any
   ) {
-    //检查newChild类型，单个节点、文本、数组
+    //检查newChild类型是否为文本
+    if (isText(newChild)) {
+      return placeSingeChild(
+        reconcileSingleTextNode(returnFiber, currentFirstChild, newChild + "")
+      );
+    }
+
+    //检查newChild类型是否为单个节点
     if (typeof newChild === "object" && newChild !== null) {
       switch (newChild.$$typeof) {
         case REACT_ELEMENT_TYPE: {
@@ -53,9 +121,21 @@ function createChildReconciler(
         }
       }
     }
-    //todo
+
+    //检查newChild是否为数组
+    if (isArray(newChild)) {
+      return reconcileChildrenArray(returnFiber, currentFirstChild, newChild);
+    }
+
     return null;
   }
 
   return reconcileChildFibers;
+}
+
+function isText(newChild: any) {
+  return (
+    (typeof newChild === "string" && newChild !== "") ||
+    typeof newChild === "number"
+  );
 }

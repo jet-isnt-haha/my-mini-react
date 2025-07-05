@@ -1,13 +1,18 @@
 import {
+  ClassComponent,
+  Fragment,
+  FunctionComponent,
   HostComponent,
+  HostText,
   IndeterminateComponent,
   type WorkTag,
 } from "./ReactWorkTags";
 import { NoFlags } from "./ReactFiberFlags";
 
 import type { ReactElement } from "shared/ReactTypes";
-import { isStr } from "shared/utils";
+import { isFn, isStr } from "shared/utils";
 import type { Fiber } from "./ReactInternalType";
+import { REACT_FRAGMENT_TYPE } from "shared/ReactSymbols";
 
 //创建第一个fiber
 export function createFiber(
@@ -73,11 +78,19 @@ export function createFiberFromTypeAndProps(
   pendingProps: any
 ) {
   let fiberTag: WorkTag = IndeterminateComponent;
-  if (isStr(type)) {
+  if (isFn(type)) {
+    //函数组件、类组件
+    if (type.prototype.isReactComponent) {
+      fiberTag = ClassComponent;
+    } else {
+      fiberTag = FunctionComponent;
+    }
+  } else if (isStr(type)) {
     //原生标签
     fiberTag = HostComponent;
+  } else if (type === REACT_FRAGMENT_TYPE) {
+    fiberTag = Fragment;
   }
-
   const fiber = createFiber(fiberTag, pendingProps, key);
   fiber.elementType = type;
   fiber.type = type;
@@ -110,4 +123,9 @@ export function createWorkInProgress(current: Fiber, pendingProps: any): Fiber {
   workInProgress.sibling = current.sibling;
   workInProgress.index = current.index;
   return workInProgress;
+}
+
+export function createFiberFromText(content: string): Fiber {
+  const fiber = createFiber(HostText, content, null);
+  return fiber;
 }

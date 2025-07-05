@@ -9,3 +9,11 @@ export function isStr(sth: any) {
 export function isNum(sth: any) {
   return typeof sth === "number";
 }
+
+export function isArray(sth: any) {
+  return Array.isArray(sth);
+}
+
+export function isFn(sth: any) {
+  return typeof sth === "function";
+}
