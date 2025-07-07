@@ -45,6 +45,8 @@ export type Fiber = {
 
   //缓存fiber
   alternate: Fiber | null;
+
+  deletions: Array<Fiber> | null;
 };
 
 export type Container = Element | Document | DocumentFragment;

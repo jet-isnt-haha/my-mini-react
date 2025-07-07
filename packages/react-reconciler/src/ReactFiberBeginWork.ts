@@ -2,6 +2,7 @@
 //2.返回子节点
 
 import { mountChildFibers, reconcileChildFibers } from "./ReactChildFiber";
+import { renderWithHooks } from "./ReactFiberHooks";
 import type { Fiber } from "./ReactInternalType";
 import {
   ClassComponent,
@@ -43,6 +44,10 @@ function updateHostRoot(current: Fiber | null, workInProgress: Fiber) {
   const nextChildren = workInProgress.memoizedState.element;
 
   reconcileChildren(current, workInProgress, nextChildren);
+
+  if (current) {
+    current.child = workInProgress.child;
+  }
 
   return workInProgress.child;
 }
@@ -87,7 +92,7 @@ function updateClassComponent(current: Fiber | null, workInProgress: Fiber) {
 
 function updateFunctionComponent(current: Fiber | null, workInProgress: Fiber) {
   const { type, pendingProps } = workInProgress;
-  const children = type(pendingProps);
+  const children = renderWithHooks(current, workInProgress, type, pendingProps);
   reconcileChildren(current, workInProgress, children);
   return workInProgress.child;
 }

@@ -1,8 +1,12 @@
 import { REACT_ELEMENT_TYPE } from "shared/ReactSymbols";
 import type { Fiber } from "./ReactInternalType";
 import type { ReactElement } from "shared/ReactTypes";
-import { createFiberFromElement, createFiberFromText } from "./ReactFiber";
-import { Placement } from "./ReactFiberFlags";
+import {
+  createFiberFromElement,
+  createFiberFromText,
+  createWorkInProgress,
+} from "./ReactFiber";
+import { ChildDeletion, Placement } from "./ReactFiberFlags";
 import { isArray } from "shared/utils";
 
 type ChildReconciler = (
@@ -28,15 +32,74 @@ function createChildReconciler(
     return newFiber;
   }
 
+  function useFiber(fiber: Fiber, pendingProps: any): Fiber {
+    const clone = createWorkInProgress(fiber, pendingProps);
+    clone.index = 0;
+    clone.sibling = null;
+    return clone;
+  }
+
   //协调单个子节点，对于页面初次渲染，创建fiber，不对比复用老节点
   function reconcileSingeElement(
     returnFiber: Fiber,
     currentFirstChild: Fiber | null,
-    newChild: ReactElement
+    element: ReactElement
   ) {
-    let createFiber = createFiberFromElement(newChild);
+    //! 节点复用条件：1.同一层级下 2.key相同 3.类型相同
+    const key = element.key;
+    let child = currentFirstChild;
+    while (child !== null) {
+      if (child.key === key) {
+        const elementType = element.type;
+        if (child.type === elementType) {
+          //todo child后的其他fiber可以删除
+          const existing = useFiber(child, element.props);
+          existing.return = returnFiber;
+          return existing;
+        } else {
+          //前提：React不认为同一层级下有两个相同的key值
+          deleteRemainingChildren(returnFiber, child);
+          break;
+        }
+      } else {
+        //todo
+        //删除单个节点
+        deleteChild(returnFiber, child);
+      }
+      child = child.sibling;
+    }
+
+    let createFiber = createFiberFromElement(element);
     createFiber.return = returnFiber;
     return createFiber;
+  }
+
+  function deleteRemainingChildren(
+    returnFiber: Fiber,
+    currentFirstChild: Fiber | null
+  ): null {
+    if (!shouldTrackSideEffects) {
+      return null;
+    }
+    let childToDelete = currentFirstChild;
+    while (childToDelete !== null) {
+      deleteChild(returnFiber, childToDelete);
+      childToDelete = childToDelete.sibling;
+    }
+    return null;
+  }
+
+  function deleteChild(returnFiber: Fiber, childToDelete: Fiber): void {
+    if (!shouldTrackSideEffects) {
+      return;
+    }
+    const deletions = returnFiber.deletions;
+    if (deletions === null) {
+      returnFiber.deletions = [childToDelete];
+      returnFiber.flags = ChildDeletion;
+    } else {
+      returnFiber.deletions!.push(childToDelete);
+    }
   }
 
   function createChild(returnFiber: Fiber, newChild: any): Fiber | null {

@@ -66,10 +66,13 @@ function prepareFreshStack(root: FiberRoot): Fiber {
   root.finishedWork = null;
   workInProgressRoot = root; //FiberRoot
   const rootWorkInProgress = createWorkInProgress(root.current, null); //Fiber
-  workInProgress = rootWorkInProgress; //Fiber
+  if (workInProgress === null) {
+    workInProgress = rootWorkInProgress; //Fiber
+  }
 
   return rootWorkInProgress;
 }
+
 function workLoopSync() {
   while (workInProgress !== null) {
     performUnitOfWork(workInProgress);
@@ -86,6 +89,8 @@ function performUnitOfWork(unitOfWork: Fiber) {
     ?beginWork 创建的 Fiber 树是局部的（不完整的），每次只处理当前节点及其直接子节点。当遍历到最深的 child（unitOfWork.child === null）时，其兄弟节点的 Fiber 已由父节点的 reconcileChildren 创建，但兄弟节点的 child 尚未被 beginWork 处理，需等到 completeUnitOfWork 设置 workInProgress 为兄弟节点后再处理。
   */
   let next = beginWork(current, unitOfWork);
+  //! 把pendingProps更新到memoizedProps
+  unitOfWork.memoizedProps = unitOfWork.pendingProps;
   //1.1执行自己
   //1.2（协调，bailout）返回子节点
   if (next === null) {
