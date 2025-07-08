@@ -33,10 +33,7 @@ export function completeWork(
         finalizeInitialChildren(instance, null, newProps);
         //3.把子DOM挂载到父DOM上
         appendAllChildren(instance, workInProgress);
-        if (
-          workInProgress.return?.alternate?.deletions?.includes(workInProgress)
-        ) {
-        } else workInProgress.stateNode = instance;
+        workInProgress.stateNode = instance;
       }
       return null;
     }

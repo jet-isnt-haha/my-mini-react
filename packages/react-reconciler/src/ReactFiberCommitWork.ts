@@ -69,13 +69,58 @@ function commitPlacement(finishedWork: Fiber) {
     if (parentDOM.containerInfo) {
       parentDOM = parentDOM.containerInfo;
     }
-    parentDOM.appendChild(domNode);
+
+    //遍历fiber，寻找finishedWork的兄弟节点，并且这个兄弟节点有dom节点，且是更新的节点。在本轮不发生移动
+    const before = getHostSibling(finishedWork);
+    insertOrAppendPlacementNode(finishedWork, before, parentDOM);
   } else {
     //Fragment
     let kid = finishedWork.child;
     while (kid !== null) {
       commitPlacement(kid);
       kid = kid.sibling;
+    }
+  }
+}
+
+function insertOrAppendPlacementNode(
+  node: Fiber,
+  before: Element,
+  parent: Element
+) {
+  if (before) {
+    parent.insertBefore(getStateNode(node), before);
+  } else {
+    parent.appendChild(getStateNode(node));
+  }
+}
+
+function getHostSibling(fiber: Fiber) {
+  let node = fiber;
+  sibling: while (1) {
+    while (node.sibling === null) {
+      if (node.return === null || isHostParent(node.return)) {
+        return null;
+      }
+      node = node.return;
+    }
+    node = node.sibling;
+    while (!isHost(node)) {
+      //新增插入|移动位置
+      if (node.flags & Placement) {
+        continue sibling;
+      }
+
+      if (node.child === null) {
+        continue sibling;
+      } else {
+        node = node.child;
+      }
+    }
+
+    //HostComponent|HostText
+    if (!(node.flags & Placement)) {
+      return node.stateNode;
     }
   }
 }

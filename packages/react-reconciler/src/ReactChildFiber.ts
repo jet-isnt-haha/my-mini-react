@@ -144,6 +144,13 @@ function createChildReconciler(
         return null;
       }
     }
+
+    if (isArray(newChild)) {
+      if (key !== null) {
+        return null;
+      }
+    }
+    return null;
   }
 
   function updateElement(
@@ -155,7 +162,7 @@ function createChildReconciler(
     if (current !== null) {
       if (current.elementType === elementType) {
         //类型相同
-        const existing = createWorkInProgress(current, element.props);
+        const existing = useFiber(current, element.props);
         existing.return = returnFiber;
         return existing;
       }
@@ -211,6 +218,38 @@ function createChildReconciler(
       //节点新增
       newFiber.flags |= Placement;
       return lastPlacedIndex;
+    }
+  }
+  function mapRemainingChildren(oldFiber: Fiber) {
+    let existingChildren: Map<string | number, Fiber> = new Map();
+    let existingChild: Fiber | null = oldFiber;
+    while (existingChild !== null) {
+      if (existingChild.key) {
+        existingChildren.set(existingChild.key, existingChild);
+      } else {
+        existingChildren.set(existingChild.index, existingChild);
+      }
+      existingChild = existingChild.sibling;
+    }
+
+    return existingChildren;
+  }
+
+  function updateFromMap(
+    existingChildren: Map<string | number, Fiber>,
+    returnFiber: Fiber,
+    newIndex: number,
+    newChild: any
+  ): Fiber | null {
+    if (isText(newChild)) {
+      const matchedFiber = existingChildren.get(newIndex) || null;
+      return updateTextNode(returnFiber, matchedFiber, newChild + "");
+    } else {
+      const matchedFiber =
+        existingChildren.get(newChild.key === null ? newIndex : newChild.key) ||
+        null;
+
+      return updateElement(returnFiber, matchedFiber, newChild);
     }
   }
 
@@ -306,8 +345,38 @@ function createChildReconciler(
       return resultFirstChild;
     }
 
-    //! 3.新老节点都还有
-    //todo
+    //!2.3 新老节点都还有
+
+    //构建map
+    const existingChildren = mapRemainingChildren(oldFiber);
+    for (; newIndex < newChildren.length; ++newIndex) {
+      const newFiber = updateFromMap(
+        existingChildren,
+        returnFiber,
+        newIndex,
+        newChildren[newIndex]
+      );
+      if (newFiber !== null) {
+        if (shouldTrackSideEffects) {
+          existingChildren.delete(
+            newFiber.key === null ? newIndex : newFiber.key
+          );
+        }
+        lastPlacedIndex = placeChild(newFiber, lastPlacedIndex, newIndex);
+        if (previousNewFiber === null) {
+          resultFirstChild = newFiber;
+        } else {
+          previousNewFiber.sibling = newFiber;
+        }
+        previousNewFiber = newFiber;
+      }
+    }
+
+    //! 新节点已构建完，但老节点仍然存在
+    if (shouldTrackSideEffects) {
+      existingChildren.forEach((child) => deleteChild(returnFiber, child));
+    }
+
     return resultFirstChild;
   }
 
