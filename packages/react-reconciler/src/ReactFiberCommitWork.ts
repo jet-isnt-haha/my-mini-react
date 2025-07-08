@@ -17,6 +17,7 @@ function recursivelyTraverseMutationEffects(
   //遍历单链表
   while (child !== null) {
     commitMutationEffects(root, child);
+
     child = child.sibling;
   }
 }
@@ -33,6 +34,7 @@ function commitReconciliationEffects(finishedWork: Fiber) {
     const parentFiber = isHostParent(finishedWork)
       ? finishedWork
       : getHostParentFiber(finishedWork);
+
     const parentDOM = parentFiber.stateNode;
     commitDeletion(finishedWork.deletions!, parentDOM);
     finishedWork.flags &= ~ChildDeletion;

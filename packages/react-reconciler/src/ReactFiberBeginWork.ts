@@ -87,6 +87,7 @@ function updateClassComponent(current: Fiber | null, workInProgress: Fiber) {
   const instance = new type(pendingProps);
   const children = instance.render();
   reconcileChildren(current, workInProgress, children);
+
   return workInProgress.child;
 }
 

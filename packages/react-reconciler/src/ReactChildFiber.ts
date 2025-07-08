@@ -8,6 +8,7 @@ import {
 } from "./ReactFiber";
 import { ChildDeletion, Placement } from "./ReactFiberFlags";
 import { isArray } from "shared/utils";
+import { HostText } from "./ReactWorkTags";
 
 type ChildReconciler = (
   returnFiber: Fiber,
@@ -94,11 +95,12 @@ function createChildReconciler(
       return;
     }
     const deletions = returnFiber.deletions;
+
     if (deletions === null) {
       returnFiber.deletions = [childToDelete];
-      returnFiber.flags = ChildDeletion;
+      returnFiber.flags |= ChildDeletion;
     } else {
-      returnFiber.deletions!.push(childToDelete);
+      deletions.push(childToDelete);
     }
   }
 
@@ -119,6 +121,99 @@ function createChildReconciler(
     return null;
   }
 
+  function updateSlot(
+    returnFiber: Fiber,
+    oldFiber: Fiber | null,
+    newChild: any
+  ) {
+    //判断节点是否可以复用
+    const key = oldFiber !== null ? oldFiber.key : null;
+    if (isText(newChild)) {
+      if (key !== null) {
+        //新节点是文本，老节点不是文本
+        return null;
+      }
+      //可能可以复用
+      return updateTextNode(returnFiber, oldFiber, newChild + "");
+    }
+
+    if (typeof newChild === "object" && newChild !== null) {
+      if (newChild.key === key) {
+        return updateElement(returnFiber, oldFiber, newChild);
+      } else {
+        return null;
+      }
+    }
+  }
+
+  function updateElement(
+    returnFiber: Fiber,
+    current: Fiber | null,
+    element: ReactElement
+  ) {
+    const elementType = element.type;
+    if (current !== null) {
+      if (current.elementType === elementType) {
+        //类型相同
+        const existing = createWorkInProgress(current, element.props);
+        existing.return = returnFiber;
+        return existing;
+      }
+    }
+
+    const created = createFiberFromElement(element);
+    created.return = returnFiber;
+    return created;
+  }
+
+  function updateTextNode(
+    returnFiber: Fiber,
+    current: Fiber | null,
+    textContent: string
+  ) {
+    if (current === null || current.tag !== HostText) {
+      //判断老节点不是文本，则新增
+      const created = createFiberFromText(textContent);
+      created.return = returnFiber;
+      return created;
+    } else {
+      //老节点是文本
+      const existing = useFiber(current, textContent);
+      existing.return = returnFiber;
+      return existing;
+    }
+  }
+
+  function placeChild(
+    newFiber: Fiber,
+    lastPlacedIndex: number, //记录的是新fiber在老fiber上的位置
+    newIndex: number
+  ) {
+    newFiber.index = newIndex;
+
+    if (!shouldTrackSideEffects) {
+      return lastPlacedIndex;
+    }
+
+    //判断节点位置是否发生相对位置变化，是否需要移动
+    const current = newFiber.alternate;
+    if (current !== null) {
+      const oldIndex = current.index;
+      if (oldIndex < lastPlacedIndex) {
+        //节点需要移动位置
+
+        newFiber.flags |= Placement;
+        return lastPlacedIndex;
+      } else {
+        return oldIndex;
+      }
+    } else {
+      //节点新增
+      newFiber.flags |= Placement;
+      return lastPlacedIndex;
+    }
+  }
+
   function reconcileChildrenArray(
     returnFiber: Fiber,
     currentFirstChild: Fiber | null,
@@ -127,9 +222,66 @@ function createChildReconciler(
     let resultFirstChild: Fiber | null = null; //头节点
     let previousNewFiber: Fiber | null = null;
     let oldFiber = currentFirstChild;
+    let nextOldFiber = null;
     let newIndex = 0;
+    let lastPlacedIndex = 0;
 
-    //初次渲染
+    // 更新阶段
+    //* 大多数情况，节点的相对位置不变
+    //old 0 1 2 3 4
+    //new 0 1 2 3
+
+    //new 3 2 0 4 1
+    //! 1.从左往右遍历，按位置比较，相同则复用。不能复用，则退出本轮
+
+    for (; oldFiber !== null && newIndex < newChildren.length; newIndex++) {
+      if (oldFiber.index > newIndex) {
+        nextOldFiber = oldFiber;
+        oldFiber = null;
+      } else {
+        nextOldFiber = oldFiber.sibling;
+      }
+      const newFiber = updateSlot(returnFiber, oldFiber, newChildren[newIndex]);
+      if (newFiber === null) {
+        if (oldFiber === null) {
+          oldFiber = nextOldFiber;
+        }
+        break;
+      }
+
+      if (shouldTrackSideEffects) {
+        if (oldFiber && newFiber?.alternate === null) {
+          deleteChild(returnFiber, oldFiber);
+        }
+      }
+
+      //判断节点在DOM的相对位置是否发生变化
+
+      //组件更新阶段，判断在更新前后的位置是否一致，如果不一致，需要移动
+
+      lastPlacedIndex = placeChild(
+        newFiber as Fiber,
+        lastPlacedIndex,
+        newIndex
+      );
+
+      if (previousNewFiber === null) {
+        resultFirstChild = newFiber as Fiber;
+      } else {
+        previousNewFiber.sibling = newFiber as Fiber;
+      }
+      previousNewFiber = newFiber as Fiber;
+      oldFiber = nextOldFiber;
+    }
+
+    //! 2.1 老节点有，新节点无。删除剩余老节点
+    if (newIndex === newChildren.length) {
+      deleteRemainingChildren(returnFiber, oldFiber);
+      return resultFirstChild;
+    }
+
+    //! 2.2 新节点有，老节点无。新增新节点
+    //包括初次渲染
     if (oldFiber === null) {
       for (; newIndex < newChildren.length; ++newIndex) {
         const newFiber = createChild(returnFiber, newChildren[newIndex]);
@@ -137,7 +289,11 @@ function createChildReconciler(
           continue;
         }
         //用于组件更新阶段，判断在更新前后的位置是否一致，如果不一致，需要移动
-        newFiber.index = newIndex;
+        lastPlacedIndex = placeChild(
+          newFiber as Fiber,
+          lastPlacedIndex,
+          newIndex
+        );
         if (previousNewFiber === null) {
           resultFirstChild = newFiber;
         } else {
@@ -149,6 +305,9 @@ function createChildReconciler(
 
       return resultFirstChild;
     }
+
+    //! 3.新老节点都还有
+    //todo
     return resultFirstChild;
   }
 

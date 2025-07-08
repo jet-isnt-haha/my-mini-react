@@ -33,7 +33,10 @@ export function completeWork(
         finalizeInitialChildren(instance, null, newProps);
         //3.把子DOM挂载到父DOM上
         appendAllChildren(instance, workInProgress);
-        workInProgress.stateNode = instance;
+        if (
+          workInProgress.return?.alternate?.deletions?.includes(workInProgress)
+        ) {
+        } else workInProgress.stateNode = instance;
       }
       return null;
     }
@@ -108,7 +111,6 @@ function finalizeInitialChildren(
 
 function appendAllChildren(parent: Element, workInProgress: Fiber) {
   let nodeFiber = workInProgress.child;
-  console.log(nodeFiber);
   while (nodeFiber !== null) {
     if (isHost(nodeFiber)) {
       parent.appendChild(nodeFiber.stateNode); //DOM节点

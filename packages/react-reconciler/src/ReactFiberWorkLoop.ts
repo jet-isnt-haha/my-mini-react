@@ -28,9 +28,8 @@ export function scheduleUpdateOnFiber(root: FiberRoot, fiber: Fiber) {
 export function performConcurrentWorkOnRoot(root: FiberRoot) {
   //! 1.render，构建fiber树VDOM(beginWork|completeWork)
   renderRootSync(root);
-  console.log("111", root);
-
   const finishedWork = root.current.alternate;
+
   root.finishedWork = finishedWork;
 
   //! 2.commit，VDOM->DOM
@@ -42,6 +41,7 @@ function commitRoot(root: FiberRoot) {
   //! 1.commit阶段开始
   exectionContext |= CommitContext;
   //! 2.mutation阶段,渲染DOM树
+
   commitMutationEffects(root, root.finishedWork as Fiber);
   //! 3.commit结束
   exectionContext = prevExecutionContext;
@@ -56,9 +56,9 @@ function renderRootSync(root: FiberRoot) {
   prepareFreshStack(root);
   //! 3.遍历构建fiber树
   workLoopSync();
+
   //! 4.render结束
   exectionContext = prevExecutionContext;
-
   workInProgress = null;
 }
 
@@ -88,7 +88,11 @@ function performUnitOfWork(unitOfWork: Fiber) {
     ?我对beginwork的理解：
     ?beginWork 创建的 Fiber 树是局部的（不完整的），每次只处理当前节点及其直接子节点。当遍历到最深的 child（unitOfWork.child === null）时，其兄弟节点的 Fiber 已由父节点的 reconcileChildren 创建，但兄弟节点的 child 尚未被 beginWork 处理，需等到 completeUnitOfWork 设置 workInProgress 为兄弟节点后再处理。
   */
+  if (unitOfWork.key === "li4") {
+    console.log(unitOfWork);
+  }
   let next = beginWork(current, unitOfWork);
+
   //! 把pendingProps更新到memoizedProps
   unitOfWork.memoizedProps = unitOfWork.pendingProps;
   //1.1执行自己
@@ -115,6 +119,7 @@ function completeUnitOfWork(unitOfWork: Fiber) {
   do {
     const current = completedWork.alternate;
     const returnFiber = completedWork.return;
+
     let next = completeWork(current, completedWork);
     if (next !== null) {
       workInProgress = next;
