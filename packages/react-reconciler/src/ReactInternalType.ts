@@ -46,7 +46,11 @@ export type Fiber = {
   //缓存fiber
   alternate: Fiber | null;
 
+  //记录要删除的子节点
   deletions: Array<Fiber> | null;
+
+  //记录effect
+  updateQueue: any;
 };
 
 export type Container = Element | Document | DocumentFragment;

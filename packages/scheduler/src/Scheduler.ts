@@ -17,8 +17,8 @@ import {
   userBlockingPriorityTimeout,
 } from "./SchedulerFeatureFlags";
 
-type Callback = (arg: boolean) => Callback | null | undefined;
-
+// type Callback = (arg: boolean) => Callback | null | undefined;
+type Callback = (args: any) => void | any;
 export type Task = {
   id: number;
   callback: Callback | null;

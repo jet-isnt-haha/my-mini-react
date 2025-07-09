@@ -1,6 +1,10 @@
+import { NormalPriority, Scheduler } from "scheduler";
 import { createFiber, createWorkInProgress } from "./ReactFiber";
 import { beginWork } from "./ReactFiberBeginWork";
-import { commitMutationEffects } from "./ReactFiberCommitWork";
+import {
+  commitMutationEffects,
+  flushPassiveEffects,
+} from "./ReactFiberCommitWork";
 import { completeWork } from "./ReactFiberCompleteWork";
 import { ensureRootIsScheduled } from "./ReactFiberRootScheduler";
 import type { Fiber, FiberRoot } from "./ReactInternalType";
@@ -47,9 +51,12 @@ function commitRoot(root: FiberRoot) {
   const prevExecutionContext = exectionContext;
   //! 1.commit阶段开始
   exectionContext |= CommitContext;
-  //! 2.mutation阶段,渲染DOM树
-
+  //! 2.1.mutation阶段,渲染DOM树
   commitMutationEffects(root, root.finishedWork as Fiber);
+  //! 2.2.passive effect阶段,执行useEffect
+  Scheduler.scheduleCallback(NormalPriority, () => {
+    flushPassiveEffects(root.finishedWork as Fiber);
+  });
   //! 3.commit结束
   exectionContext = prevExecutionContext;
   workInProgressRoot = null;

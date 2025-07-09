@@ -2,10 +2,19 @@ import { isFn } from "shared/utils";
 import { scheduleUpdateOnFiber } from "./ReactFiberWorkLoop";
 import type { Fiber, FiberRoot } from "./ReactInternalType";
 import { HostRoot } from "./ReactWorkTags";
+import { Passive, Update, type Flags } from "./ReactFiberFlags";
+import { HookLayout, HookPassive, type HookFlags } from "./ReactHookEffectTags";
 
 type Hook = {
   memoizedState: any;
   next: null | Hook;
+};
+
+type Effect = {
+  tag: HookFlags;
+  create: () => (() => void) | void;
+  deps: Array<any> | void | null;
+  next: Effect | null;
 };
 
 //当前正在工作的函数组件的fiber
@@ -25,6 +34,7 @@ export function renderWithHooks<Props>(
 ): any {
   currentlyRenderingFiber = workInProgress;
   workInProgress.memoizedState = null;
+  workInProgress.updateQueue = null;
   let children = Component(props);
 
   finishRenderingHooks();
@@ -209,4 +219,87 @@ export function areHookInputEqual(
     return false;
   }
   return true;
+}
+
+export function useRef<T>(initialValue: T): { current: T } {
+  const hook = updateWorkInProgressHook();
+  if (currentHook === null) {
+    hook.memoizedState = { current: initialValue };
+  }
+  return hook.memoizedState;
+}
+
+//useEffect与useLayoutEffect的区别
+// * 存储结构一样
+// * effect和destroy函数的执行时机不同
+export function useLayoutEffect(
+  create: () => (() => void) | void,
+  deps: Array<any> | void | null
+) {
+  return updateEffectImpl(Update, HookLayout, create, deps);
+}
+export function useEffect(
+  create: () => (() => void) | void,
+  deps: Array<any> | void | null
+) {
+  return updateEffectImpl(Passive, HookPassive, create, deps);
+}
+
+//存储effect
+function updateEffectImpl(
+  fiberFlags: Flags,
+  hookFlag: HookFlags,
+  create: () => (() => void) | void,
+  deps: Array<any> | void | null
+) {
+  const hook = updateWorkInProgressHook();
+
+  const nextDeps = deps === undefined ? null : deps;
+  if (currentHook !== null) {
+    if (nextDeps !== null) {
+      const prevDeps = hook.memoizedState.deps;
+      if (prevDeps !== null) {
+        if (areHookInputEqual(nextDeps, prevDeps)) {
+          return;
+        }
+      }
+    }
+  }
+
+  currentlyRenderingFiber!.flags |= fiberFlags;
+
+  //1.保存effect 2.构建effect链表
+  hook.memoizedState = pushEffect(hookFlag, create, nextDeps);
+}
+
+function pushEffect(
+  tag: HookFlags,
+  create: () => (() => void) | void,
+  deps: Array<any> | void | null
+) {
+  const effect: Effect = {
+    tag,
+    create,
+    deps,
+    next: null,
+  };
+
+  let componentUpdateQueue = currentlyRenderingFiber!.updateQueue;
+  //单向循环链表
+  if (componentUpdateQueue === null) {
+    //第一个effect
+    componentUpdateQueue = {
+      lastEffect: null,
+    };
+    currentlyRenderingFiber!.updateQueue = componentUpdateQueue;
+    componentUpdateQueue.lastEffect = effect.next = effect;
+  } else {
+    const lastEffect = componentUpdateQueue.lastEffect;
+    const firstEffect = lastEffect.next;
+    lastEffect.next = effect;
+    effect.next = firstEffect;
+    componentUpdateQueue.lastEffect = effect;
+  }
+
+  return effect;
 }

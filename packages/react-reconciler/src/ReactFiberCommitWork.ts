@@ -1,7 +1,13 @@
 import { isHost } from "./ReactFiberCompleteWork";
-import { ChildDeletion, Placement } from "./ReactFiberFlags";
+import { ChildDeletion, Passive, Placement, Update } from "./ReactFiberFlags";
+import { HookLayout, HookPassive, type HookFlags } from "./ReactHookEffectTags";
 import type { Fiber, FiberRoot } from "./ReactInternalType";
-import { HostComponent, HostRoot, HostText } from "./ReactWorkTags";
+import {
+  FunctionComponent,
+  HostComponent,
+  HostRoot,
+  HostText,
+} from "./ReactWorkTags";
 
 export function commitMutationEffects(root: FiberRoot, finishedWork: Fiber) {
   // 1.遍历
@@ -39,6 +45,14 @@ function commitReconciliationEffects(finishedWork: Fiber) {
     commitDeletion(finishedWork.deletions!, parentDOM);
     finishedWork.flags &= ~ChildDeletion;
     finishedWork.deletions = null;
+  }
+
+  if (flags & Update) {
+    if (finishedWork.tag === FunctionComponent) {
+      //执行layout effect
+      commitHookEffectListMount(HookLayout, finishedWork);
+      finishedWork.flags &= ~Update;
+    }
   }
 }
 
@@ -143,4 +157,52 @@ function getHostParentFiber(finishedWork: Fiber): Fiber {
 //检查fiber是HostParent
 function isHostParent(fiber: Fiber): boolean {
   return fiber.tag === HostComponent || fiber.tag === HostRoot;
+}
+
+export function flushPassiveEffects(finishedWork: Fiber) {
+  // !1. 遍历子节点，检查子节点
+  recursivelyTraversePassiveMountEffects(finishedWork);
+  // !2. 如果有passive effects 执行
+  commitPassiveEffects(finishedWork);
+}
+
+function recursivelyTraversePassiveMountEffects(finishedWork: Fiber) {
+  let child = finishedWork.child;
+  while (child !== null) {
+    // !1. 遍历子节点，检查子节点
+    recursivelyTraversePassiveMountEffects(child);
+    // !2. 如果有passive effects 执行
+    commitPassiveEffects(finishedWork);
+    child = child.sibling;
+  }
+}
+
+function commitPassiveEffects(finishedWork: Fiber) {
+  switch (finishedWork.tag) {
+    case FunctionComponent: {
+      if (finishedWork.flags & Passive) {
+        commitHookEffectListMount(HookPassive, finishedWork);
+        finishedWork.flags &= ~Passive;
+      }
+      break;
+    }
+  }
+}
+
+function commitHookEffectListMount(hookFlags: HookFlags, finishedWork: Fiber) {
+  const updateQueue = finishedWork.updateQueue;
+  let lastEffect = updateQueue!.lastEffect;
+  if (lastEffect !== null) {
+    const firstEffect = lastEffect.next;
+    let effect = firstEffect;
+
+    do {
+      if ((effect.tag & hookFlags) === hookFlags) {
+        const create = effect.create;
+
+        create();
+      }
+      effect = effect.next;
+    } while (effect !== firstEffect);
+  }
 }
