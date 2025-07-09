@@ -244,13 +244,15 @@ function createChildReconciler(
     if (isText(newChild)) {
       const matchedFiber = existingChildren.get(newIndex) || null;
       return updateTextNode(returnFiber, matchedFiber, newChild + "");
-    } else {
+    } else if (typeof newChild === "object" && newChild !== null) {
       const matchedFiber =
         existingChildren.get(newChild.key === null ? newIndex : newChild.key) ||
         null;
 
       return updateElement(returnFiber, matchedFiber, newChild);
     }
+
+    return null;
   }
 
   function reconcileChildrenArray(

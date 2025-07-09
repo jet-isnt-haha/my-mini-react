@@ -1,3 +1,4 @@
+import { isFn } from "shared/utils";
 import { scheduleUpdateOnFiber } from "./ReactFiberWorkLoop";
 import type { Fiber, FiberRoot } from "./ReactInternalType";
 import { HostRoot } from "./ReactWorkTags";
@@ -74,7 +75,7 @@ function updateWorkInProgressHook(): Hook {
 }
 
 export function useReducer<S, I, A>(
-  reducer: (state: S, action: A) => S,
+  reducer: ((state: S, action: A) => S) | null,
   initialArg: I,
   init?: (initialArg: I) => S
 ) {
@@ -119,7 +120,7 @@ function dispatchReducerAction<S, A>(
   const root = getRootForUpdateFiber(fiber);
 
   //准备调度更新
-  scheduleUpdateOnFiber(root, fiber);
+  scheduleUpdateOnFiber(root, fiber, true);
 }
 
 function getRootForUpdateFiber(sourceFiber: Fiber): FiberRoot {
@@ -136,4 +137,76 @@ function getRootForUpdateFiber(sourceFiber: Fiber): FiberRoot {
   } else {
     throw new Error("Root fiber not found or is not HostRoot.");
   }
+}
+
+//源码中useState与useReducer对比
+//useState，如果state没有改变，不引起组件更新。
+//reducer代表state修改规则，useReducer适合复用
+export function useState<S>(initialState: (() => S) | S) {
+  const init = isFn(initialState) ? (initialState as any)() : initialState;
+  return useReducer(null, init);
+}
+
+export function useMemo<T>(
+  nextCreate: () => T,
+  deps: Array<any> | void | null
+) {
+  const hook = updateWorkInProgressHook();
+  const nextDeps = deps === undefined ? null : deps;
+
+  const prevState = hook.memoizedState;
+
+  //检查依赖项是否变化
+  if (prevState !== null) {
+    if (nextDeps !== null) {
+      const prevDeps = prevState[1];
+      if (areHookInputEqual(nextDeps, prevDeps)) {
+        //依赖项没有变化，返回上一次计算结果
+        return prevState[0];
+      }
+    }
+  }
+  const nextValue = nextCreate();
+  hook.memoizedState = [nextValue, nextDeps];
+
+  return nextValue;
+}
+
+export function useCallback<T>(callback: T, deps: Array<any> | void | null): T {
+  const hook = updateWorkInProgressHook();
+
+  const nextDeps = deps === undefined ? null : deps;
+
+  const prevState = hook.memoizedState;
+  if (prevState !== null) {
+    if (nextDeps !== null) {
+      const prevDeps = prevState[1];
+      if (areHookInputEqual(nextDeps, prevDeps)) {
+        //依赖项没有变化，返回上一次缓存的callback
+        return prevState[0];
+      }
+    }
+  }
+
+  hook.memoizedState = [callback, nextDeps];
+
+  return callback;
+}
+
+//检查hook依赖性是否改变
+export function areHookInputEqual(
+  nextDeps: Array<any>,
+  prevDevs: Array<any> | null
+): boolean {
+  if (prevDevs === null) {
+    return false;
+  }
+
+  for (let i = 0; i < prevDevs.length && nextDeps.length; ++i) {
+    if (Object.is(nextDeps[i], prevDevs[i])) {
+      continue;
+    }
+    return false;
+  }
+  return true;
 }
