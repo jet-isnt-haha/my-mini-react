@@ -2,12 +2,15 @@ import { isNum, isStr } from "shared/utils";
 import type { Fiber } from "./ReactInternalType";
 import {
   ClassComponent,
+  ContextConsumer,
+  ContextProvider,
   Fragment,
   FunctionComponent,
   HostComponent,
   HostRoot,
   HostText,
 } from "./ReactWorkTags";
+import { popProvider } from "./ReactFiberNewContext";
 
 export function completeWork(
   current: Fiber | null,
@@ -18,7 +21,12 @@ export function completeWork(
     case Fragment:
     case ClassComponent:
     case FunctionComponent:
+    case ContextConsumer:
     case HostRoot: {
+      return null;
+    }
+    case ContextProvider: {
+      popProvider(workInProgress.type._context);
       return null;
     }
     case HostComponent: {

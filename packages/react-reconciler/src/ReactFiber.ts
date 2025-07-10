@@ -1,5 +1,7 @@
 import {
   ClassComponent,
+  ContextConsumer,
+  ContextProvider,
   Fragment,
   FunctionComponent,
   HostComponent,
@@ -12,7 +14,11 @@ import { NoFlags } from "./ReactFiberFlags";
 import type { ReactElement } from "shared/ReactTypes";
 import { isFn, isStr } from "shared/utils";
 import type { Fiber } from "./ReactInternalType";
-import { REACT_FRAGMENT_TYPE } from "shared/ReactSymbols";
+import {
+  REACT_CONTEXT_TYPE,
+  REACT_FRAGMENT_TYPE,
+  REACT_PROVIDER_TYPE,
+} from "shared/ReactSymbols";
 
 //创建第一个fiber
 export function createFiber(
@@ -94,7 +100,12 @@ export function createFiberFromTypeAndProps(
     fiberTag = HostComponent;
   } else if (type === REACT_FRAGMENT_TYPE) {
     fiberTag = Fragment;
+  } else if (type.$$typeof === REACT_PROVIDER_TYPE) {
+    fiberTag = ContextProvider;
+  } else if (type.$$typeof === REACT_CONTEXT_TYPE) {
+    fiberTag = ContextConsumer;
   }
+
   const fiber = createFiber(fiberTag, pendingProps, key);
   fiber.elementType = type;
   fiber.type = type;

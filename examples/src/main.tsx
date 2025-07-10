@@ -9,6 +9,8 @@ import {
   useRef,
   useEffect,
   useLayoutEffect,
+  createContext,
+  useContext,
 } from "../which-react";
 import "./index.css";
 
@@ -37,10 +39,13 @@ import "./index.css";
 //   );
 // }
 
+const CountContext = createContext(100);
+const ThemeContext = createContext("red");
+
 function FunctionComponent() {
-  const [count1, setCount1] = useReducer((x) => x + 1, 0);
+  // const [count1, setCount1] = useReducer((x) => x + 1, 0);
   const [count2, setCount2] = useState(0);
-  let ref = useRef(0);
+  // let ref = useRef(0);
   // const addClick = useCallback(() => {
   //   let sum = 0;
   //   for (let i = 0; i < count1; ++i) {
@@ -52,30 +57,67 @@ function FunctionComponent() {
   //   console.log("compute");
   //   return addClick();
   // }, [addClick]);
-  useLayoutEffect(() => {
-    console.log("useLayoutEffect");
-  }, [count1]);
-  useEffect(() => {
-    console.log("useEffect");
-  }, [count2]);
+  // useLayoutEffect(() => {
+  //   console.log("useLayoutEffect");
+  // }, [count1]);
+  // useEffect(() => {
+  //   console.log("useEffect");
+  // }, [count2]);
+
   return (
     <div className="border">
-      <h1>Function Component</h1>
-      <button onClick={() => setCount1()}>{count1}</button>
-      <button onClick={() => setCount2(count2 + 1)}>{count2}</button>
-      <Child count1={count1} count2={count2} />
+      <h1>函数组件</h1>
+      <button
+        onClick={() => {
+          setCount2(count2 + 1);
+        }}
+      >
+        {count2}
+      </button>
+      <ThemeContext.Provider value="green">
+        <CountContext.Provider value={count2}>
+          <CountContext.Provider value={count2 + 1}>
+            <Child />
+          </CountContext.Provider>
+        </CountContext.Provider>
+      </ThemeContext.Provider>
     </div>
   );
 }
-function Child({ count1, count2 }: { count1: number; count2: number }) {
-  useLayoutEffect(() => {
-    console.log("useLayoutEffect Child");
-  }, [count1]);
-  useEffect(() => {
-    console.log("useEffect Child");
-  }, [count2]);
+function Child() {
+  const count = useContext(CountContext);
+  const theme = useContext(ThemeContext);
+  return (
+    <div className={"border " + theme}>
+      Child
+      <p>{count}</p>
+      <p>Consumer</p>
+      <ThemeContext.Consumer>
+        {(theme) => (
+          <div className={theme}>
+            <CountContext.Consumer>
+              {(value) => <p>{value}</p>}
+            </CountContext.Consumer>
+          </div>
+        )}
+      </ThemeContext.Consumer>
+      <p>第三种消费方式:ContextType,只能消费单一的context来源</p>
+      <ClassComponent />
+    </div>
+  );
+}
 
-  return <div>Child</div>;
+class ClassComponent extends Component {
+  static contextType = CountContext;
+  render() {
+    console.log("classComponent render");
+    return (
+      <div className="border">
+        <h1>Class 类组件</h1>
+        <p>{this.context as number}</p>
+      </div>
+    );
+  }
 }
 ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
   <FunctionComponent />

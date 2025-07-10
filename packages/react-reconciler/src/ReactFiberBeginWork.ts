@@ -3,9 +3,12 @@
 
 import { mountChildFibers, reconcileChildFibers } from "./ReactChildFiber";
 import { renderWithHooks } from "./ReactFiberHooks";
+import { pushProvider, readContext } from "./ReactFiberNewContext";
 import type { Fiber } from "./ReactInternalType";
 import {
   ClassComponent,
+  ContextConsumer,
+  ContextProvider,
   Fragment,
   FunctionComponent,
   HostComponent,
@@ -30,6 +33,10 @@ export function beginWork(
       return updateClassComponent(current, workInProgress);
     case FunctionComponent:
       return updateFunctionComponent(current, workInProgress);
+    case ContextProvider:
+      return updateContextProvider(current, workInProgress);
+    case ContextConsumer:
+      return updateContextConsumer(current, workInProgress);
     //todo
   }
 
@@ -84,7 +91,15 @@ function updateHostFragment(current: Fiber | null, workInProgress: Fiber) {
 
 function updateClassComponent(current: Fiber | null, workInProgress: Fiber) {
   const { type, pendingProps } = workInProgress;
-  const instance = new type(pendingProps);
+  const context = type.contextType;
+  const newValue = readContext(context);
+  let instance = workInProgress.stateNode;
+  if (current === null) {
+    instance = new type(pendingProps);
+    workInProgress.stateNode = instance;
+  }
+
+  instance.context = newValue;
   const children = instance.render();
   reconcileChildren(current, workInProgress, children);
 
@@ -95,6 +110,33 @@ function updateFunctionComponent(current: Fiber | null, workInProgress: Fiber) {
   const { type, pendingProps } = workInProgress;
   const children = renderWithHooks(current, workInProgress, type, pendingProps);
   reconcileChildren(current, workInProgress, children);
+  return workInProgress.child;
+}
+
+function updateContextProvider(current: Fiber | null, workInProgress: Fiber) {
+  const context = workInProgress.type._context;
+  const value = workInProgress.pendingProps.value;
+
+  //记录1.context、value到栈中   2.后代组件消费 3.消费完后出栈
+
+  pushProvider(context, value);
+
+  reconcileChildren(
+    current,
+    workInProgress,
+    workInProgress.pendingProps.children
+  );
+  return workInProgress.child;
+}
+
+function updateContextConsumer(current: Fiber | null, workInProgress: Fiber) {
+  const context = workInProgress.type;
+  const newValue = readContext(context);
+
+  const render = workInProgress.pendingProps.children;
+  const newChildren = render(newValue);
+
+  reconcileChildren(current, workInProgress, newChildren);
   return workInProgress.child;
 }
 
