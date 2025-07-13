@@ -11,6 +11,11 @@ import {
   HostText,
 } from "./ReactWorkTags";
 import { popProvider } from "./ReactFiberNewContext";
+import {
+  precacheFiberNode,
+  updateFiberProps,
+} from "../../react-dom-bindings/src/events/ReactDOMComponentTree";
+import { registrationNameDependencies } from "../../react-dom-bindings/src/events/EventRegistry";
 
 export function completeWork(
   current: Fiber | null,
@@ -43,10 +48,14 @@ export function completeWork(
         appendAllChildren(instance, workInProgress);
         workInProgress.stateNode = instance;
       }
+      precacheFiberNode(workInProgress, workInProgress.stateNode as Element);
+      updateFiberProps(workInProgress.stateNode, newProps);
       return null;
     }
     case HostText: {
       workInProgress.stateNode = document.createTextNode(newProps);
+      precacheFiberNode(workInProgress, workInProgress.stateNode as Element);
+      updateFiberProps(workInProgress.stateNode, newProps);
       return null;
     }
     //todo
@@ -87,8 +96,8 @@ function finalizeInitialChildren(
         domElement.textContent = "";
       }
     } else {
-      if (propKey === "onClick") {
-        domElement.removeEventListener("click", prevProp);
+      if (registrationNameDependencies[propKey]) {
+        // domElement.removeEventListener("click", prevProp);
       } else {
         if (!(prevProp in nextProps)) {
           (domElement as any)[propKey] = "";
@@ -105,8 +114,8 @@ function finalizeInitialChildren(
         domElement.textContent = nextProp + "";
       }
     } else {
-      if (propKey === "onClick") {
-        domElement.addEventListener("click", nextProp);
+      if (registrationNameDependencies[propKey]) {
+        // domElement.addEventListener("click", nextProp);
       } else {
         (domElement as any)[propKey] = nextProp;
       }

@@ -13,6 +13,7 @@
   "dependencies": {
     "shared": "workspace:*",
     "scheduler": "workspace:*",
-    "react-dom": "workspace:*"
+    "react-dom": "workspace:*",
+    "react-dom-bindings": "workspace:*"
   }
 }
