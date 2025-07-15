@@ -11,6 +11,7 @@ import {
   useLayoutEffect,
   createContext,
   useContext,
+  useDeferredValue,
 } from "../which-react";
 import "./index.css";
 import MySlowList from "./MySlowList";
@@ -19,6 +20,7 @@ function FunctionComponent() {
   const [count, setCount] = useReducer((x) => x + 1, 0);
   const [text1, setText1] = useState("aaa");
 
+  const deferredText = useDeferredValue(text1);
   return (
     <div className="border">
       <h1>函数组件</h1>
@@ -38,7 +40,7 @@ function FunctionComponent() {
         }}
       />
       <p>{text1}</p>
-
+      <b>{deferredText}</b>
       {/* 非紧急更新 */}
       <MySlowList text={text1} />
     </div>

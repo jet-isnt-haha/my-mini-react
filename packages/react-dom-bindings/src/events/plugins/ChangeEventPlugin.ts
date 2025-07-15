@@ -35,6 +35,10 @@ function extractEvents(
   const targetNode = targetInst ? targetInst.stateNode : null;
   if (isTextInputElement(targetNode)) {
     if (domEventName === "input" || domEventName === "change") {
+      const inst = getInstIfValueChanged(targetInst as Fiber, targetNode);
+      if (!inst) {
+        return;
+      }
       const listeners = accumulateTwoPhaseListeners(targetInst, "onChange");
       if (listeners.length > 0) {
         const event = new (SyntheticEvent as any)(
@@ -48,6 +52,15 @@ function extractEvents(
       }
     }
   }
+}
+
+function getInstIfValueChanged(
+  targetInst: Fiber,
+  targetNode: HTMLInputElement
+): boolean {
+  const oldValue = targetInst.pendingProps.value;
+  const newValue = targetNode.value;
+  return oldValue !== newValue;
 }
 
 export { registerEvents, extractEvents };

@@ -1,3 +1,5 @@
+import type { FiberRoot } from "./ReactInternalType";
+
 export type Lanes = number;
 export type Lane = number;
 export type LaneMap<T> = Array<T>;
@@ -56,3 +58,64 @@ export const IdleLane: Lane = /*                        */ 0b0010000000000000000
 
 export const OffscreenLane: Lane = /*                   */ 0b0100000000000000000000000000000;
 export const DeferredLane: Lane = /*                    */ 0b1000000000000000000000000000000;
+
+let nextTransitionLane: Lane = TransitionLane1;
+
+export function includesNonIdleWork(lanes: Lanes): boolean {
+  return (lanes & NonIdleLanes) !== NoLanes;
+}
+
+export function claimNextTransitionLane(): Lane {
+  //循环遍历lanes，将每个新的transition分配到下一个lane
+  //在大多数情况下，这意味着每个transition都有自己的lane，直到用完所有lanes并循环回到开头
+  const lane = nextTransitionLane;
+  nextTransitionLane <<= 1;
+  if ((nextTransitionLane & TransitionLanes) === NoLanes) {
+    nextTransitionLane = TransitionLane1;
+  }
+  return lane;
+}
+//获取优先级最高的lane
+//因为在lane的值中，值越小，代表的优先级越高。即
+//获取最低位的1，如4194240 &-4194240就是64
+export function getHighestPriorityLane(lanes: Lanes): Lane {
+  return lanes & -lanes;
+}
+
+export function getNextLanes(root: FiberRoot, wipLanes: Lanes): Lanes {
+  const pendingLanes = root.pendingLanes;
+  if (pendingLanes === NoLanes) {
+    return NoLanes;
+  }
+  let nextLanes = getHighestPriorityLane(pendingLanes);
+  if (nextLanes === NoLanes) {
+    return NoLanes;
+  }
+
+  //如果已经在render阶段中，切换lanes会中断当前渲染进程，导致丢失进度
+  //只有当新lanes的优先级更高时，我们才应该这样做
+
+  if (wipLanes !== NoLanes && wipLanes !== nextLanes) {
+    const nextLane = getHighestPriorityLane(nextLanes);
+    const wipLane = getHighestPriorityLane(wipLanes);
+    if (
+      nextLane >= wipLane ||
+      //Default priority updates 不应中断transition。default updates和transition updates 之间唯一的区别在于前者不支持刷新过渡。
+      (nextLane === DefaultLane && (wipLane & TransitionLanes) !== NoLanes)
+    ) {
+      //继续完成正在进行中的树。不中断
+      return wipLanes;
+    }
+  }
+  return nextLanes;
+}
+
+//是否：只包括非紧急的lanes
+export function includesOnlyNonUrgentLanes(lanes: Lanes): boolean {
+  const UrgentLanes = SyncLane | InputContinuousLane | DefaultLane;
+  return (lanes & UrgentLanes) === NoLanes;
+}
+
+export function mergeLanes(a: Lanes | Lane, b: Lanes | Lane): Lanes {
+  return a | b;
+}

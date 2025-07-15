@@ -21,6 +21,7 @@ import {
   REACT_MEMO_TYPE,
   REACT_PROVIDER_TYPE,
 } from "shared/ReactSymbols";
+import { NoLane, NoLanes } from "./ReactFiberLane";
 
 //创建第一个fiber
 export function createFiber(
@@ -73,6 +74,9 @@ function FiberNode(tag: WorkTag, pendingProps: any, key: null | string) {
   this.deletions = null;
 
   this.updateQueue = null;
+
+  this.lanes = NoLanes;
+  this.childLanes = NoLanes;
 }
 
 //根据ReactElement创建fiber
@@ -135,6 +139,8 @@ export function createWorkInProgress(current: Fiber, pendingProps: any): Fiber {
   }
 
   workInProgress.flags = current.flags;
+  workInProgress.lanes = current.lanes;
+  workInProgress.childLanes = current.childLanes;
   workInProgress.child = current.child;
   workInProgress.memoizedProps = current.memoizedProps;
   workInProgress.memoizedState = current.memoizedState;

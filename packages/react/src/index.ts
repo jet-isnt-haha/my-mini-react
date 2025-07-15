@@ -9,6 +9,7 @@ export {
   useEffect,
   useLayoutEffect,
   useContext,
+  useDeferredValue,
 } from "react-reconciler/src/ReactFiberHooks";
 export { createContext } from "./ReactContext";
 export { memo } from "./ReactMemo";

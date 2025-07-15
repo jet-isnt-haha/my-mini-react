@@ -1,8 +1,11 @@
 import {
   DefaultLane,
+  getHighestPriorityLane,
   IdleLane,
+  includesNonIdleWork,
   InputContinuousLane,
   type Lane,
+  type Lanes,
   NoLane,
   SyncLane,
 } from "./ReactFiberLane";
@@ -22,4 +25,27 @@ export function getCurrentUpdatePriority(): EventPriority {
 
 export function setCurrentUpdatePriority(newPriority: EventPriority) {
   currentUpdatePriority = newPriority;
+}
+
+export function isHigherEventPriority(
+  a: EventPriority,
+  b: EventPriority
+): boolean {
+  return a !== 0 && a < b;
+}
+
+export function lanesToEventPriority(lanes: Lanes): EventPriority {
+  //根据优先级最高的lane，返回对应的EventPriority。这里对应Scheduler包中的优先级
+  const lane = getHighestPriorityLane(lanes);
+  if (!isHigherEventPriority(DiscreteEventPriority, lane)) {
+    return DiscreteEventPriority;
+  }
+  if (!isHigherEventPriority(ContinuousEventPriority, lane)) {
+    return ContinuousEventPriority;
+  }
+  if (includesNonIdleWork(lane)) {
+    return DefaultEventPriority; //2
+  }
+
+  return IdleEventPriority;
 }

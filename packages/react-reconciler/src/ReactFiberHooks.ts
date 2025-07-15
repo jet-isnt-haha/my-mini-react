@@ -1,11 +1,20 @@
 import { isFn } from "shared/utils";
-import { scheduleUpdateOnFiber } from "./ReactFiberWorkLoop";
+import {
+  requestDeferredLane,
+  scheduleUpdateOnFiber,
+} from "./ReactFiberWorkLoop";
 import type { Fiber, FiberRoot } from "./ReactInternalType";
 import { HostRoot } from "./ReactWorkTags";
 import { Passive, Update, type Flags } from "./ReactFiberFlags";
 import { HookLayout, HookPassive, type HookFlags } from "./ReactHookEffectTags";
 import { ReactContext } from "shared/ReactTypes";
 import { readContext } from "./ReactFiberNewContext";
+import {
+  includesOnlyNonUrgentLanes,
+  mergeLanes,
+  NoLanes,
+  type Lanes,
+} from "./ReactFiberLane";
 
 type Hook = {
   memoizedState: any;
@@ -28,12 +37,16 @@ let workInProgressHook: Hook | null = null;
 //旧的hook
 let currentHook: Hook | null = null;
 
+let renderLanes: Lanes = NoLanes;
+
 export function renderWithHooks<Props>(
   current: Fiber | null,
   workInProgress: Fiber,
   Component: any,
-  props: Props
+  props: Props,
+  nextRenderLanes: Lanes
 ): any {
+  renderLanes = nextRenderLanes;
   currentlyRenderingFiber = workInProgress;
   workInProgress.memoizedState = null;
   workInProgress.updateQueue = null;
@@ -308,4 +321,41 @@ function pushEffect(
 
 export function useContext<T>(context: ReactContext<T>): T {
   return readContext(context);
+}
+
+export function useDeferredValue<T>(value: T): T {
+  const hook = updateWorkInProgressHook();
+
+  const prevValue: T = hook.memoizedState;
+
+  if (currentHook !== null) {
+    if (Object.is(value, prevValue)) {
+      //传入的值与当前渲染的值是相同的，直接bailout
+      return value;
+    } else {
+      //收到一个与当前数值不同的新值
+      // 不是只包括非紧急更新
+      const shouldDeferValue = !includesOnlyNonUrgentLanes(renderLanes);
+      if (shouldDeferValue) {
+        //此时是紧急更新。由于数值已经更改，可以继续使用先前的数值，并生成一个延迟渲染以稍后更新它
+        //调度一个延迟渲染
+        const deferredLane = requestDeferredLane();
+        currentlyRenderingFiber!.lanes = mergeLanes(
+          currentlyRenderingFiber!.lanes, //0
+          deferredLane //128
+        );
+
+        //复用先前的数值。我们不需要将其标记一个update，因为我们没有渲染新值。
+        return prevValue;
+      } else {
+        //只包括非紧急更新。没有其他紧急的更新，此时执行最高非紧急更新
+        hook.memoizedState = value;
+        return value;
+      }
+    }
+  }
+
+  hook.memoizedState = value;
+
+  return value;
 }

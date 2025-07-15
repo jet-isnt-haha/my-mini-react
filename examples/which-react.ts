@@ -12,4 +12,5 @@ export {
   createContext,
   useContext,
   memo,
+  useDeferredValue,
 } from "../packages/react/src";

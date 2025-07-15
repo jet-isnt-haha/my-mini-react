@@ -1,4 +1,5 @@
 import type { Flags } from "./ReactFiberFlags";
+import type { Lanes } from "./ReactFiberLane";
 import type { WorkTag } from "./ReactWorkTags";
 
 export type Fiber = {
@@ -51,6 +52,9 @@ export type Fiber = {
 
   //记录effect
   updateQueue: any;
+
+  lanes: Lanes;
+  childLanes: Lanes;
 };
 
 export type Container = Element | Document | DocumentFragment;
@@ -59,4 +63,6 @@ export type FiberRoot = {
   current: Fiber;
   //一个准备提交 work-in-progress，HostRoot
   finishedWork: Fiber | null;
+
+  pendingLanes: Lanes;
 };
