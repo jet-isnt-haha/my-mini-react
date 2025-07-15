@@ -2,6 +2,11 @@
 //2.返回子节点
 
 import { mountChildFibers, reconcileChildFibers } from "./ReactChildFiber";
+import {
+  createFiberFromTypeAndProps,
+  createWorkInProgress,
+  isSimpleFunctionComponent,
+} from "./ReactFiber";
 import { renderWithHooks } from "./ReactFiberHooks";
 import { pushProvider, readContext } from "./ReactFiberNewContext";
 import type { Fiber } from "./ReactInternalType";
@@ -14,8 +19,10 @@ import {
   HostComponent,
   HostRoot,
   HostText,
+  MemoComponent,
+  SimpleMemoComponent,
 } from "./ReactWorkTags";
-
+import { shallowEqual } from "shared/shallowEqual";
 export function beginWork(
   current: Fiber | null,
   workInProgress: Fiber
@@ -37,6 +44,10 @@ export function beginWork(
       return updateContextProvider(current, workInProgress);
     case ContextConsumer:
       return updateContextConsumer(current, workInProgress);
+    case MemoComponent:
+      return updateMemoComponent(current, workInProgress);
+    case SimpleMemoComponent:
+      return updateSimpleMemoComponent(current, workInProgress);
     //todo
   }
 
@@ -138,6 +149,61 @@ function updateContextConsumer(current: Fiber | null, workInProgress: Fiber) {
 
   reconcileChildren(current, workInProgress, newChildren);
   return workInProgress.child;
+}
+function updateMemoComponent(current: Fiber | null, workInProgress: Fiber) {
+  const Component = workInProgress.type;
+  const type = Component.type;
+  //组件是否是初次渲染
+  if (current === null) {
+    if (
+      isSimpleFunctionComponent(type) &&
+      Component.compare === null &&
+      Component.defaultProps === undefined
+    ) {
+      workInProgress.type = type;
+      workInProgress.tag = SimpleMemoComponent;
+      return updateSimpleMemoComponent(current, workInProgress);
+    }
+    const child = createFiberFromTypeAndProps(
+      type,
+      null,
+      workInProgress.pendingProps
+    );
+    child.return = workInProgress;
+    workInProgress.child = child;
+    return child;
+  }
+
+  //组件更新
+  let compare = Component.compare;
+  compare = compare !== null ? compare : shallowEqual;
+  if (compare(current.memoizedProps, workInProgress.pendingProps)) {
+    return bailoutAlreadyFinishedWork();
+  }
+
+  const newChild = createWorkInProgress(
+    current.child as Fiber,
+    workInProgress.pendingProps
+  );
+
+  newChild.return = workInProgress;
+  workInProgress.child = newChild;
+  return newChild;
+}
+function updateSimpleMemoComponent(
+  current: Fiber | null,
+  workInProgress: Fiber
+) {
+  if (current !== null) {
+    if (shallowEqual(current.memoizedProps, workInProgress.pendingProps)) {
+      return bailoutAlreadyFinishedWork();
+    }
+  }
+  return updateFunctionComponent(current, workInProgress);
+}
+
+function bailoutAlreadyFinishedWork() {
+  return null;
 }
 
 //协调子节点，构建新的fiber树

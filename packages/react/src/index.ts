@@ -11,3 +11,4 @@ export {
   useContext,
 } from "react-reconciler/src/ReactFiberHooks";
 export { createContext } from "./ReactContext";
+export { memo } from "./ReactMemo";

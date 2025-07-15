@@ -5,7 +5,11 @@ import {
   addEventCaptureListener,
 } from "./EventListener";
 import { allNativeEvents } from "./EventRegistry";
-import { type EventSystemFlags, IS_CAPTURE_PHASE } from "./EventSystemFlags";
+import {
+  type EventSystemFlags,
+  IS_CAPTURE_PHASE,
+  SHOULD_NOT_PROCESS_POLYFILL_EVENT_PLUGINS,
+} from "./EventSystemFlags";
 
 import * as SimpleEventPlugin from "./plugins/SimpleEventPlugin";
 import * as ChangeEventPlugin from "./plugins/ChangeEventPlugin";
@@ -47,16 +51,17 @@ export function extractEvents(
     eventSystemFlags,
     targetContainer
   );
-
-  ChangeEventPlugin.extractEvents(
-    dispatchQueue,
-    domEventName,
-    targetInst,
-    nativeEvent,
-    nativeEventTarget,
-    eventSystemFlags,
-    targetContainer
-  );
+  if ((eventSystemFlags & SHOULD_NOT_PROCESS_POLYFILL_EVENT_PLUGINS) === 0) {
+    ChangeEventPlugin.extractEvents(
+      dispatchQueue,
+      domEventName,
+      targetInst,
+      nativeEvent,
+      nativeEventTarget,
+      eventSystemFlags,
+      targetContainer
+    );
+  }
 }
 
 SimpleEventPlugin.registerEvents();
@@ -223,7 +228,7 @@ export function accumulateTwoPhaseListeners(
     const { stateNode, tag } = instance;
     if (tag === HostComponent && stateNode !== null) {
       const captureListener = getListener(instance, captureName as string);
-      if (captureListener !== null) {
+      if (captureListener != null) {
         //捕获阶段
         listeners.unshift({
           instance,
@@ -232,7 +237,7 @@ export function accumulateTwoPhaseListeners(
         });
 
         const bubbleListener = getListener(instance, reactName as string);
-        if (bubbleListener !== null) {
+        if (bubbleListener != null) {
           //冒泡阶段
           listeners.unshift({
             instance,

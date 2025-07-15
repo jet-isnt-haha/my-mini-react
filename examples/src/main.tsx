@@ -13,6 +13,7 @@ import {
   useContext,
 } from "../which-react";
 import "./index.css";
+import MySlowList from "./MySlowList";
 
 function FunctionComponent() {
   const [count, setCount] = useReducer((x) => x + 1, 0);
@@ -37,6 +38,9 @@ function FunctionComponent() {
         }}
       />
       <p>{text1}</p>
+
+      {/* 非紧急更新 */}
+      <MySlowList text={text1} />
     </div>
   );
 }

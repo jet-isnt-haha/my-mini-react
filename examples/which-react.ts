@@ -11,4 +11,5 @@ export {
   useLayoutEffect,
   createContext,
   useContext,
+  memo,
 } from "../packages/react/src";
